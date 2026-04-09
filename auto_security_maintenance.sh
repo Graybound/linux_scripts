@@ -25,8 +25,8 @@
 #   --help, -h        Show usage information
 #
 # Also works via:
-#   curl -fsSL https://github.com/Graybound/linux_scripts/blob/main/auto_security_maintenance.sh | sudo bash
-#   curl -fsSL https://github.com/Graybound/linux_scripts/blob/main/auto_security_maintenance.sh | sudo bash -s -- --status
+#   curl -fsSL https://github.com/Graybound/linux_scripts/raw/refs/heads/main/auto_security_maintenance.sh | sudo bash
+#   curl -fsSL https://github.com/Graybound/linux_scripts/raw/refs/heads/main/auto_security_maintenance.sh | sudo bash -s -- --status
 #
 # Safe to run multiple times. Re-running --setup overwrites the
 # previous configuration.
@@ -156,28 +156,20 @@ detect_tui() {
     # A graphical TUI (whiptail/dialog) needs a capable terminal.
     # If TERM is missing, empty, or "dumb", ncurses cannot draw and
     # the tool hangs on a blank screen.  Fall back to plain text.
-    local term_ok="false"
     case "${TERM:-dumb}" in
-        dumb|"") term_ok="false" ;;
-        *)       term_ok="true"  ;;
+        dumb|"")
+            TUI_CMD="plain"
+            return
+            ;;
     esac
 
-    if [ "$term_ok" = "true" ] && command -v whiptail >/dev/null 2>&1; then
-        # Quick smoke-test: whiptail --version exits 0 when functional
-        if whiptail --version </dev/tty >/dev/null 2>&1; then
-            TUI_CMD="whiptail"
-            return
-        fi
+    if command -v whiptail >/dev/null 2>&1; then
+        TUI_CMD="whiptail"
+    elif command -v dialog >/dev/null 2>&1; then
+        TUI_CMD="dialog"
+    else
+        TUI_CMD="plain"
     fi
-
-    if [ "$term_ok" = "true" ] && command -v dialog >/dev/null 2>&1; then
-        if dialog --version </dev/tty >/dev/null 2>&1; then
-            TUI_CMD="dialog"
-            return
-        fi
-    fi
-
-    TUI_CMD="plain"
 }
 
 tui_msgbox() {
